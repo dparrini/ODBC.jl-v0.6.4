@@ -1,4 +1,4 @@
-using DecFP, Missings, WeakRefStrings
+using Missings, WeakRefStrings
 
 # Link to ODBC Driver Manager (system-dependent)
 let
@@ -363,7 +363,7 @@ const julia2SQL = Dict(
     WeakRefString{UInt8}  => SQL_CHAR,
     WeakRefString{UInt16} => SQL_WCHAR,
     WeakRefString{UInt32} => SQL_WCHAR,
-    Dec64                 => SQL_DOUBLE,
+    Float64               => SQL_DOUBLE,
     Float16               => SQL_FLOAT,
     Float32               => SQL_FLOAT,
     Float64               => SQL_DOUBLE,
@@ -385,7 +385,7 @@ const julia2C = Dict(
     WeakRefString{UInt8}  => SQL_C_CHAR,
     WeakRefString{UInt16} => SQL_C_WCHAR,
     WeakRefString{UInt32} => SQL_C_WCHAR,
-    Dec64                 => SQL_C_DOUBLE,
+    Float64               => SQL_C_DOUBLE,
     Float16               => SQL_C_FLOAT,
     Float32               => SQL_C_FLOAT,
     Float64               => SQL_C_DOUBLE,
@@ -418,8 +418,8 @@ const SQL2Julia = Dict(
     SQL_WCHAR          => (SQLWCHAR, Union{WeakRefString{SQLWCHAR}, Missing}, false),
     SQL_WVARCHAR       => (SQLWCHAR, Union{WeakRefString{SQLWCHAR}, Missing}, false),
     SQL_WLONGVARCHAR   => (SQLWCHAR, Union{String, Missing}, true),
-    SQL_DECIMAL        => (SQLCHAR, Union{Dec64, Missing}, false),
-    SQL_NUMERIC        => (SQLCHAR, Union{Dec64, Missing}, false),
+    SQL_DECIMAL        => (SQLCHAR, Union{Float64, Missing}, false),
+    SQL_NUMERIC        => (SQLCHAR, Union{Float64, Missing}, false),
     SQL_SMALLINT       => (SQLSMALLINT, Union{SQLSMALLINT, Missing}, false),
     SQL_INTEGER        => (SQLINTEGER,  Union{SQLINTEGER, Missing}, false),
     SQL_REAL           => (SQLREAL,   Union{SQLREAL, Missing}, false),

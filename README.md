@@ -1,7 +1,7 @@
 
-# ODBC
+# ODBC_v06
 
-*A Julia library for interacting with the ODBC API*
+*A fork of the original Julia library for interacting with the ODBC API within Julia 0.6.4*
 
 | **Documentation**                                                               | **PackageEvaluator**                                            | **Build Status**                                                                                |
 |:-------------------------------------------------------------------------------:|:---------------------------------------------------------------:|:-----------------------------------------------------------------------------------------------:|

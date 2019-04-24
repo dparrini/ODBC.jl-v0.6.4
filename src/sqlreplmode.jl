@@ -20,7 +20,7 @@ function evaluate_sql(s::String)
     global odbcdf
     global dsn
     try
-        odbcdf = ODBC.query(dsn, s)
+        odbcdf = ODBC_v06.query(dsn, s)
     catch e
         println(STDOUT, "error during sql evaluation: ", e)
         return nothing

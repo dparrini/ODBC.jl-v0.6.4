@@ -1,5 +1,5 @@
 __precompile__(true)
-module ODBC
+module ODBC_v06
 
 using DataStreams, Missings, CategoricalArrays, WeakRefStrings, DataFrames
 import Compat: Sys
@@ -44,11 +44,11 @@ const BUFLEN = 1024
 
 function ODBCError(handle::Ptr{Void}, handletype::Int16)
     i = Int16(1)
-    state = ODBC.Block(ODBC.API.SQLWCHAR, 6)
-    native = Ref{ODBC.API.SQLINTEGER}()
-    error_msg = ODBC.Block(ODBC.API.SQLWCHAR, BUFLEN)
-    msg_length = Ref{ODBC.API.SQLSMALLINT}()
-    while ODBC.API.SQLGetDiagRec(handletype, handle, i, state.ptr, native, error_msg.ptr, BUFLEN, msg_length) == ODBC.API.SQL_SUCCESS
+    state = ODBC_v06.Block(ODBC_v06.API.SQLWCHAR, 6)
+    native = Ref{ODBC_v06.API.SQLINTEGER}()
+    error_msg = ODBC_v06.Block(ODBC_v06.API.SQLWCHAR, BUFLEN)
+    msg_length = Ref{ODBC_v06.API.SQLSMALLINT}()
+    while ODBC_v06.API.SQLGetDiagRec(handletype, handle, i, state.ptr, native, error_msg.ptr, BUFLEN, msg_length) == ODBC_v06.API.SQL_SUCCESS
         st  = string(state, 5)
         msg = string(error_msg, msg_length[])
         println("[ODBC] $st: $msg")
@@ -62,28 +62,28 @@ macro CHECK(handle, handletype, func)
     str = string(func)
     esc(quote
         ret = $func
-        ret != ODBC.API.SQL_SUCCESS && ret != ODBC.API.SQL_SUCCESS_WITH_INFO && ODBCError($handle, $handletype) &&
-            throw(ODBCError("$($str) failed; return code: $ret => $(ODBC.API.RETURN_VALUES[ret])"))
+        ret != ODBC_v06.API.SQL_SUCCESS && ret != ODBC_v06.API.SQL_SUCCESS_WITH_INFO && ODBCError($handle, $handletype) &&
+            throw(ODBCError("$($str) failed; return code: $ret => $(ODBC_v06.API.RETURN_VALUES[ret])"))
         nothing
     end)
 end
 
-Base.@deprecate listdrivers ODBC.drivers
-Base.@deprecate listdsns ODBC.dsns
+Base.@deprecate listdrivers ODBC_v06.drivers
+Base.@deprecate listdsns ODBC_v06.dsns
 
 "List ODBC drivers that have been installed and registered"
 function drivers()
     descriptions = String[]
     attributes   = String[]
-    driver_desc = Block(ODBC.API.SQLWCHAR, BUFLEN)
-    desc_length = Ref{ODBC.API.SQLSMALLINT}()
-    driver_attr = Block(ODBC.API.SQLWCHAR, BUFLEN)
-    attr_length = Ref{ODBC.API.SQLSMALLINT}()
-    dir = ODBC.API.SQL_FETCH_FIRST
-    while ODBC.API.SQLDrivers(ENV, dir, driver_desc.ptr, BUFLEN, desc_length, driver_attr.ptr, BUFLEN, attr_length) == ODBC.API.SQL_SUCCESS
+    driver_desc = Block(ODBC_v06.API.SQLWCHAR, BUFLEN)
+    desc_length = Ref{ODBC_v06.API.SQLSMALLINT}()
+    driver_attr = Block(ODBC_v06.API.SQLWCHAR, BUFLEN)
+    attr_length = Ref{ODBC_v06.API.SQLSMALLINT}()
+    dir = ODBC_v06.API.SQL_FETCH_FIRST
+    while ODBC_v06.API.SQLDrivers(ENV, dir, driver_desc.ptr, BUFLEN, desc_length, driver_attr.ptr, BUFLEN, attr_length) == ODBC_v06.API.SQL_SUCCESS
         push!(descriptions, string(driver_desc, desc_length[]))
         push!(attributes,   string(driver_attr, attr_length[]))
-        dir = ODBC.API.SQL_FETCH_NEXT
+        dir = ODBC_v06.API.SQL_FETCH_NEXT
     end
     return [descriptions attributes]
 end
@@ -92,15 +92,15 @@ end
 function dsns()
     descriptions = String[]
     attributes   = String[]
-    dsn_desc    = Block(ODBC.API.SQLWCHAR, BUFLEN)
-    desc_length = Ref{ODBC.API.SQLSMALLINT}()
-    dsn_attr    = Block(ODBC.API.SQLWCHAR, BUFLEN)
-    attr_length = Ref{ODBC.API.SQLSMALLINT}()
-    dir = ODBC.API.SQL_FETCH_FIRST
-    while ODBC.API.SQLDataSources(ENV, dir, dsn_desc.ptr, BUFLEN, desc_length, dsn_attr.ptr, BUFLEN, attr_length) == ODBC.API.SQL_SUCCESS
+    dsn_desc    = Block(ODBC_v06.API.SQLWCHAR, BUFLEN)
+    desc_length = Ref{ODBC_v06.API.SQLSMALLINT}()
+    dsn_attr    = Block(ODBC_v06.API.SQLWCHAR, BUFLEN)
+    attr_length = Ref{ODBC_v06.API.SQLSMALLINT}()
+    dir = ODBC_v06.API.SQL_FETCH_FIRST
+    while ODBC_v06.API.SQLDataSources(ENV, dir, dsn_desc.ptr, BUFLEN, desc_length, dsn_attr.ptr, BUFLEN, attr_length) == ODBC_v06.API.SQL_SUCCESS
         push!(descriptions, string(dsn_desc, desc_length[]))
         push!(attributes,   string(dsn_attr, attr_length[]))
-        dir = ODBC.API.SQL_FETCH_NEXT
+        dir = ODBC_v06.API.SQL_FETCH_NEXT
     end
     return [descriptions attributes]
 end
@@ -116,7 +116,7 @@ mutable struct DSN
     stmt_ptr2::Ptr{Void}
 end
 
-Base.show(io::IO,conn::DSN) = print(io, "ODBC.DSN($(conn.dsn))")
+Base.show(io::IO,conn::DSN) = print(io, "ODBC_v06.DSN($(conn.dsn))")
 
 const dsn = DSN("", C_NULL, C_NULL, C_NULL)
 
@@ -127,19 +127,19 @@ Takes optional 2nd and 3rd arguments for `username` and `password`, respectively
 A great resource for building valid connection strings is [http://www.connectionstrings.com/](http://www.connectionstrings.com/).
 """
 function DSN(connectionstring::AbstractString, username::AbstractString=String(""), password::AbstractString=String(""); prompt::Bool=true)
-    dbc = ODBC.ODBCAllocHandle(ODBC.API.SQL_HANDLE_DBC, ODBC.ENV)
-    dsns = ODBC.dsns()
+    dbc = ODBC_v06.ODBCAllocHandle(ODBC_v06.API.SQL_HANDLE_DBC, ODBC_v06.ENV)
+    dsns = ODBC_v06.dsns()
     found = false
     for d in dsns[:,1]
         connectionstring == d && (found = true)
     end
     if found
-        @CHECK dbc ODBC.API.SQL_HANDLE_DBC ODBC.API.SQLConnect(dbc, connectionstring, username, password)
+        @CHECK dbc ODBC_v06.API.SQL_HANDLE_DBC ODBC_v06.API.SQLConnect(dbc, connectionstring, username, password)
     else
         connectionstring = ODBCDriverConnect!(dbc, connectionstring, prompt)
     end
-    stmt = ODBCAllocHandle(ODBC.API.SQL_HANDLE_STMT, dbc)
-    stmt2 = ODBCAllocHandle(ODBC.API.SQL_HANDLE_STMT, dbc)
+    stmt = ODBCAllocHandle(ODBC_v06.API.SQL_HANDLE_STMT, dbc)
+    stmt2 = ODBCAllocHandle(ODBC_v06.API.SQL_HANDLE_STMT, dbc)
     global dsn
     dsn.dsn = connectionstring
     dsn.dbc_ptr = dbc
@@ -152,7 +152,7 @@ end
 function disconnect!(conn::DSN)
     ODBCFreeStmt!(conn.stmt_ptr)
     ODBCFreeStmt!(conn.stmt_ptr2)
-    ODBC.API.SQLDisconnect(conn.dbc_ptr)
+    ODBC_v06.API.SQLDisconnect(conn.dbc_ptr)
     return nothing
 end
 
@@ -163,41 +163,41 @@ mutable struct Statement
     task::Task
 end
 
-"An `ODBC.Source` type executes a `query` string upon construction and prepares data for streaming to an appropriate `Data.Sink`"
+"An `ODBC_v06.Source` type executes a `query` string upon construction and prepares data for streaming to an appropriate `Data.Sink`"
 mutable struct Source{T} <: Data.Source
     schema::Data.Schema
     dsn::DSN
     query::String
     columns::T
     status::Int
-    rowsfetched::Ref{ODBC.API.SQLLEN}
+    rowsfetched::Ref{ODBC_v06.API.SQLLEN}
     rowoffset::Int
     boundcols::Vector{Any}
-    indcols::Vector{Vector{ODBC.API.SQLLEN}}
-    sizes::Vector{ODBC.API.SQLULEN}
-    ctypes::Vector{ODBC.API.SQLSMALLINT}
+    indcols::Vector{Vector{ODBC_v06.API.SQLLEN}}
+    sizes::Vector{ODBC_v06.API.SQLULEN}
+    ctypes::Vector{ODBC_v06.API.SQLSMALLINT}
     jltypes::Vector{Type}
     supportsreset::Bool
 end
 
-Base.show(io::IO, source::Source) = print(io, "ODBC.Source:\n\tDSN: $(source.dsn)\n\tstatus: $(source.status)\n\tschema: $(source.schema)")
+Base.show(io::IO, source::Source) = print(io, "ODBC_v06.Source:\n\tDSN: $(source.dsn)\n\tstatus: $(source.status)\n\tschema: $(source.schema)")
 
 include("Source.jl")
 include("Sink.jl")
 include("sqlreplmode.jl")
 
 function __init__()
-    global const ENV = ODBC.ODBCAllocHandle(ODBC.API.SQL_HANDLE_ENV, ODBC.API.SQL_NULL_HANDLE)
-    global const DECZERO = Dec64(0)
+    global const ENV = ODBC_v06.ODBCAllocHandle(ODBC_v06.API.SQL_HANDLE_ENV, ODBC_v06.API.SQL_NULL_HANDLE)
+    global const DECZERO = Float64(0)
     toggle_sql_repl()
 end
 
 # used to 'clear' a statement of bound columns, resultsets,
 # and other bound parameters in preparation for a subsequent query
 function ODBCFreeStmt!(stmt)
-    ODBC.API.SQLFreeStmt(stmt, ODBC.API.SQL_CLOSE)
-    ODBC.API.SQLFreeStmt(stmt, ODBC.API.SQL_UNBIND)
-    ODBC.API.SQLFreeStmt(stmt, ODBC.API.SQL_RESET_PARAMS)
+    ODBC_v06.API.SQLFreeStmt(stmt, ODBC_v06.API.SQL_CLOSE)
+    ODBC_v06.API.SQLFreeStmt(stmt, ODBC_v06.API.SQL_UNBIND)
+    ODBC_v06.API.SQLFreeStmt(stmt, ODBC_v06.API.SQL_RESET_PARAMS)
 end
 
 end #ODBC module
